@@ -174,11 +174,12 @@ GetVersionControlStatus(changedOnly=true)
    - 当机器装了多个版本时显式传 `--tia-major-version 20`（或 21）以免自动选最高版；  
    - 首次连接时在 TIA 弹窗中授权 **Openness**。
 
-2. **挂载 MCP（一条命令，全自动）**  
-   **双击根目录的 `配置MCP.bat`**（V20 用 `配置MCP-v20.bat`）即可；命令行等价写法：`tia.cmd config`。
+2. **挂载 MCP（最简，默认 TRAE SOLO）**  
+   - **只用 TRAE SOLO（推荐）**：双击根目录的 **`配置MCP-SOLO.bat`**（V20 用 `配置MCP-SOLO-v20.bat`）。它只把 MCP 注册进 TRAE SOLO，随后**自动在后台预热** headless 博途（第一次调用就秒连）。完成后重启 TRAE SOLO 即可，无需记任何参数。
+   - **想一次配所有客户端**：双击 `配置MCP.bat`（V20 用 `配置MCP-v20.bat`）；命令行等价写法 `tia.cmd config`。默认 **TRAE SOLO 优先**（最先注册），其余本机检测到的客户端再按需写入。
 
-   它会**自动发现一切**：自己的绝对路径、注册表里的博途安装与版本、与版本匹配的 exe（V20/V21 自动选对），然后把 `tia-portal` 条目一次性写进本机检测到的所有 AI 客户端配置——**Claude Desktop / Claude Code / Cursor / VS Code / Trae CN（国内版）**（原配置自动备份 `.bak`，其它 server 原样保留）。重启 AI 客户端即生效。  
-   - 只配某一个宿主：`config --host vscode`（可选 `claude|claude-code|cursor|vscode|trae-cn` 等）；  
+   它会**自动发现一切**：自己的绝对路径、注册表里的博途安装与版本、与版本匹配的 exe（V20/V21 自动选对），然后把 `tia-portal` 条目写进 AI 客户端配置——**TRAE SOLO / Trae CN（国内版）/ Claude Desktop / Claude Code / Cursor / VS Code**（原配置自动备份 `.bak`，其它 server 原样保留）。重启 AI 客户端即生效。  
+   - 只配某一个宿主：`config --host trae-solo`（可选 `trae-solo|trae-cn|claude|claude-code|cursor|vscode` 等）；  
    - 只看不写（手动粘贴其它宿主）：`config --print`；  
    - **工具档位**：默认就是精简档（~55 个核心工具），无需任何参数，见下文《工具档位》；想一次列全 221 个用 `config --full`；  
    - **连不上 / 报错**：`tia.cmd doctor` 一键体检（TIA 安装 / exe 版本匹配 / Openness 用户组 / 宿主注册状态，每项给修法；`--fix` 自动补用户组，v2.2.8）；  

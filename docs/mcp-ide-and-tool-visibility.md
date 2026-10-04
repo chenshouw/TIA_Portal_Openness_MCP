@@ -1,6 +1,6 @@
 # MCP 与 IDE：交付包边界说明
 
-交付包 **不绑定** 某一种 IDE（Cursor / VS Code / Claude Desktop / Trae CN（国内版）/ 自建 HTTP 客户端均可）。  
+交付包 **不绑定** 某一种 IDE（TRAE SOLO（默认首选）/ Trae CN（国内版）/ Cursor / VS Code / Claude Desktop / 自建 HTTP 客户端均可）。  
 协议只有两类：**stdio**（子进程 JSON-RPC）与 **HTTP**（完整 MCP 会话），见 `tools/tiaportal-mcp/skill/SKILL.md` §2。
 
 ## 1. 工具列表以谁为准

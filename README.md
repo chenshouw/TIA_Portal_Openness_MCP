@@ -164,8 +164,12 @@ More: [AI assistant](https://aeenhance.com/assistant) · [Online debugging](http
    - set the `TiaPortalLocation` user environment variable;
    - let it auto-read `HKLM\SOFTWARE\Siemens\Automation\_InstalledSW\TIAP{20|21}\TIA_Opns\Path`.
    With multiple versions installed, pass `--tia-major-version 20` (or `21`) explicitly.
-2. **Mount the MCP — one command, fully automatic.**
-   Double-click `配置MCP.bat` in the bundle root (V20: `配置MCP-v20.bat`), or run `tia.cmd config`.
+2. **Mount the MCP — TRAE SOLO first, one double-click.**
+   - **TRAE SOLO only (recommended):** double-click `配置MCP-SOLO.bat` in the bundle root
+     (V20: `配置MCP-SOLO-v20.bat`). It registers only into TRAE SOLO and then auto-prewarms a
+     headless TIA instance in the background (so the first call is fast). Just restart TRAE SOLO.
+   - **Configure every detected client:** double-click `配置MCP.bat` (V20: `配置MCP-v20.bat`),
+     or run `tia.cmd config`. TRAE SOLO is registered first; other detected hosts follow.
 
    > Engine exe locations by distribution: Release zip →
    > `tools\tiaportal-mcp\src\TiaMcpServer\bin\Release\net48\` (V21) /
@@ -175,10 +179,10 @@ More: [AI assistant](https://aeenhance.com/assistant) · [Online debugging](http
 
    It self-discovers everything: its own absolute path, the installed TIA Portal
    (registry) and version, and the version-matching exe (V20/V21 picked for you) —
-   then writes the `tia-portal` entry into every AI host detected on this machine:
-   **Claude Desktop / Claude Code / Cursor / VS Code / Trae CN** (existing config backed up
+   then writes the `tia-portal` entry into AI hosts, **TRAE SOLO / Trae CN / Claude Desktop /
+   Claude Code / Cursor / VS Code** (existing config backed up
    as `.bak`, other servers preserved). Restart the AI client to load it.
-   Options: `config --host vscode` (or `claude|claude-code|cursor|trae-cn`), `config --print`
+   Options: `config --host trae-solo` (or `trae-cn|claude|claude-code|cursor|vscode`), `config --print`
    to copy a snippet manually. The server lists **~55 core tools of 222 by default**
    (~8,500 instead of ~38,800 tokens of schema per turn) so weaker models are not drowned
    and VS Code/Copilot's 128-tool cap and Windsurf's 100 never trip. Nothing is lost: the

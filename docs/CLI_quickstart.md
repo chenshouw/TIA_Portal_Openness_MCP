@@ -35,7 +35,7 @@ tia compile  D:\proj\X.ap21 --plc PLC_1
 tia describe D:\proj\X.ap21 --plc PLC_1
 tia prewarm                     # 常驻 headless 实例，后续命令 ~1s 连上
 tia doctor                      # 一键体检：TIA 安装/exe 版本匹配/Openness 组/宿主注册（--fix 自动修用户组）
-tia config                      # 一键把 MCP 注册进 Claude Desktop/Claude Code/Cursor/VS Code/Trae CN（国内版）（--lite=精简 42 工具档）
+tia config                      # 默认首选 TRAE SOLO（最先注册），其余检测到的客户端一并写入；只想配 SOLO 可双击 配置MCP-SOLO.bat
 tia schema                      # 打印 spec 所有字段说明
 ```
 退出码：**0=成功，1=有失败步骤，2=错误**（方便脚本/CI 判读）。

@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 >nul
-rem 一键把本 MCP 注册进 Claude Desktop / Claude Code / Cursor / VS Code / Trae CN（国内版）（V20）。V21 用户请用 配置MCP.bat。
+rem 一键把本 MCP 注册进各 AI 客户端（V20）。默认首选 TRAE SOLO（优先注册），其余检测到的客户端一并写入。
+rem 只想最简单接入 SOLO：直接双击同目录的「配置MCP-SOLO-v20.bat」（注册并自动预热）。V21 用户用 配置MCP.bat。
 rem 自动写入正确的 exe 路径并合并到现有配置（保留你已有的其它 MCP server，原配置自动备份为 *.bak）。
 rem V20 引擎 exe 位置：交付 zip 在 tools\...\bin-v20\Release\net48；git 克隆在 runtime\v20（若发布包含）。
 set "EXE=%~dp0runtime\v20\TiaMcpServer.exe"

@@ -193,12 +193,14 @@ namespace TiaMcpServer.Cli
                 Console.WriteLine("VS Code — %APPDATA%\\Code\\User\\mcp.json (servers):");
                 Console.WriteLine(McpConfigInstaller.Snippet(exe, ver, McpConfigInstaller.HostStyle.VsCode, full));
                 Console.WriteLine();
-                // Trae 国内版同样是 mcpServers 结构，但需要额外的启动/调用超时 env，故单独输出其片段。
-                var traeCn = McpConfigInstaller.KnownHosts().Find(h => h.Name == "Trae CN");
-                if (traeCn != null)
+                // Trae 系（TRAE SOLO 首选 / Trae CN）同为 mcpServers 结构，但需要额外的冷启动超时
+                // env，故各自单独输出片段，SOLO 在前。
+                foreach (var traeName in new[] { McpConfigInstaller.DefaultHostName, "Trae CN" })
                 {
-                    Console.WriteLine($"Trae CN（国内版）— {traeCn.ConfigPath} (mcpServers，含冷启动超时 env):");
-                    Console.WriteLine(McpConfigInstaller.Snippet(exe, ver, traeCn.Style, full, traeCn.ExtraEnv));
+                    var th = McpConfigInstaller.KnownHosts().Find(h => h.Name == traeName);
+                    if (th == null) continue;
+                    Console.WriteLine($"{th.Name} — {th.ConfigPath} (mcpServers，含冷启动超时 env):");
+                    Console.WriteLine(McpConfigInstaller.Snippet(exe, ver, th.Style, full, th.ExtraEnv));
                     Console.WriteLine();
                 }
                 Console.WriteLine("Gemini CLI / Windsurf / Cline use the same mcpServers shape as the first snippet.");
@@ -208,38 +210,51 @@ namespace TiaMcpServer.Cli
                 return 0;
             }
 
-            string? only = Opt(args, "--host"); // claude|claude-code|cursor|vscode (default: all installed)
+            string? only = Opt(args, "--host"); // 默认：TRAE SOLO 优先，其余本机已安装的宿主一并写入
             int done = 0, failed = 0;
-            foreach (var h in McpConfigInstaller.KnownHosts())
+
+            // 首选宿主置顶：无 --host 一键运行时先处理 TRAE SOLO，其余宿主保持声明顺序随后。
+            var hosts = McpConfigInstaller.KnownHosts();
+            if (string.IsNullOrEmpty(only))
+            {
+                hosts.Sort((a, b) =>
+                    (a.Name == McpConfigInstaller.DefaultHostName ? 0 : 1) -
+                    (b.Name == McpConfigInstaller.DefaultHostName ? 0 : 1));
+            }
+
+            foreach (var h in hosts)
             {
                 bool targeted = !string.IsNullOrEmpty(only) && MatchesHost(h.Name, only!);
                 if (!string.IsNullOrEmpty(only) && !targeted) continue;
 
-                // Without an explicit --host, only touch hosts that look installed —
-                // don't fabricate config files for IDEs the user doesn't have.
+                // 默认宿主即使还没有 mcp.json 也要写入 —— 它是主推目标，Apply 会自行创建目录。
+                // 其余宿主维持原规则：只在本机"看起来已安装"时才动，避免给用户没有的 IDE 凭空造配置。
+                // 显式 --host 始终强制处理。
+                bool isDefault = string.IsNullOrEmpty(only) && h.Name == McpConfigInstaller.DefaultHostName;
                 bool installed = System.IO.File.Exists(h.ConfigPath) ||
                                  System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(h.ConfigPath));
-                if (!targeted && !installed)
+                if (!targeted && !isDefault && !installed)
                 {
                     Console.WriteLine("  [skip]   " + h.Name + " (not detected on this machine)");
                     continue;
                 }
 
-                // Trae 官方要求 stdio 的 command 路径不含空格（含空格会解析失败）。这里只警告不阻断，
-                // 因为最终是否被拒绝取决于宿主版本，且用户可能改用无空格的 junction/复制目录。
-                if (h.Name == "Trae CN" && exe.IndexOf(' ') >= 0)
+                // Trae 系（Trae CN / TRAE SOLO）官方要求 stdio 的 command 路径不含空格。
+                // 这里只警告不阻断，因为最终是否被拒绝取决于宿主版本，且用户可能改用无空格目录。
+                if ((h.Name == "Trae CN" || h.Name == "TRAE SOLO") && exe.IndexOf(' ') >= 0)
                 {
                     Console.WriteLine("  [warn]   " + h.Name + ": 引擎路径含空格（" + exe + "），Trae 可能无法启动该 command；建议把交付包放到无空格目录后重跑 config。");
                 }
 
-                try { Console.WriteLine("  [ok]     " + h.Name + ": " + McpConfigInstaller.Apply(h.ConfigPath, exe, ver, h.Style, full, h.ExtraEnv)); done++; }
+                var prefix = isDefault ? "[primary]" : "[ok]     ";
+                try { Console.WriteLine("  " + prefix + " " + h.Name + ": " + McpConfigInstaller.Apply(h.ConfigPath, exe, ver, h.Style, full, h.ExtraEnv)); done++; }
                 catch (Exception ex) { Console.Error.WriteLine("  [failed] " + h.Name + ": " + ex.Message); failed++; }
             }
 
             Console.WriteLine(done > 0
                 ? $"Configured {done} host(s) for TIA V{ver} -> {exe}{(full ? " [full profile: all tools — exceeds VS Code/Copilot's 128 and Windsurf's 100 tool cap]" : " [default lite profile: ~48 core tools; the rest stay reachable via FindTools/CallTool]")}. Restart the AI client to load it. (original config backed up as *.bak)"
                 : "No host config written. Targeted host not found, or use `config --print` to copy the snippet manually.");
-            Console.WriteLine("For other hosts, run `config --print` and paste the matching snippet.");
+            Console.WriteLine($"首选客户端为 {McpConfigInstaller.DefaultHostName}；只想配它用 `config --host trae-solo`。其它宿主用 `config --print` 复制对应片段。");
             return failed > 0 && done == 0 ? 1 : 0;
         }
 
@@ -391,10 +406,11 @@ USAGE
   tia export   <project.apXX> --plc NAME --out DIR --block PATH [--scl]
   tia import   <project.apXX> --plc NAME --from DIR [--no-overwrite]
   tia prewarm  [--stop]                                   Hold a headless instance open (~1s attach after)
-  tia config   [--host claude|claude-code|cursor|vscode|codex|gemini|windsurf|cline|trae-cn] [--print] [--full]
-                                                          One-click: register this MCP into all detected AI hosts
-                                                          (Claude Desktop / Claude Code / Cursor / VS Code / Trae CN);
-                                                          auto-picks the exe matching your installed TIA version.
+  tia config   [--host trae-solo|trae-cn|claude|claude-code|cursor|vscode|codex|gemini|windsurf|cline] [--print] [--full]
+                                                          One-click: default host is TRAE SOLO (registered
+                                                          first); other detected AI hosts are also configured.
+                                                          (Claude Desktop / Claude Code / Cursor / VS Code /
+                                                          Trae CN). Auto-picks the exe matching your TIA version.
                                                           Default lists ~48 core tools; the rest stay reachable
                                                           on demand via FindTools + CallTool.
                                                           --full = list every tool instead (rejected by VS Code/

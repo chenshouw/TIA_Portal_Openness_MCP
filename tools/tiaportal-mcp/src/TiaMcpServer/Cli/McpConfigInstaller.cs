@@ -19,6 +19,12 @@ namespace TiaMcpServer.Cli
     {
         public const string ServerKey = "tia-portal";
 
+        /// <summary>
+        /// 一键注册（不带 --host）时的首选宿主名。无参数运行会优先保证该宿主被注册并在输出中
+        /// 置顶主推；其余宿主仍按"本机已安装才写入"的既有检测逻辑处理。
+        /// </summary>
+        public const string DefaultHostName = "TRAE SOLO";
+
         // Keep Chinese path segments human-readable instead of \uXXXX escapes.
         private static readonly JsonSerializerOptions JsonOpts = new JsonSerializerOptions
         {
@@ -94,6 +100,16 @@ namespace TiaMcpServer.Cli
                 // 国际版 Trae/TraeCode 的候选路径为 %APPDATA%\Trae\User\mcp.json（本机当前尚无该文件），
                 // 按分期要求本期不实现，勿并入本条目。
                 new Host("Trae CN",        Path.Combine(appData, "Trae CN", "User", "mcp.json"), HostStyle.McpServers,
+                         new Dictionary<string, string>
+                         {
+                             ["START_MCP_TIMEOUT_MS"] = "120000",
+                             ["RUN_MCP_TIMEOUT_MS"]   = "600000",
+                         }),
+                // TRAE SOLO（独立 SOLO 客户端，VS Code 内核 Electron 应用，用户数据目录为 TRAE SOLO）。
+                // 全局 MCP 配置与其 IDE 版同构：User\mcp.json + 根键 mcpServers。SOLO 是一键注册的
+                // 默认/首选宿主（见 CliCommands.Config 的排序与主推）。冷启动同样需要放宽超时。
+                // 注意 command 路径不能含空格（官方限制），含空格警告在 CliCommands.Config 里给出。
+                new Host("TRAE SOLO",      Path.Combine(appData, "TRAE SOLO", "User", "mcp.json"), HostStyle.McpServers,
                          new Dictionary<string, string>
                          {
                              ["START_MCP_TIMEOUT_MS"] = "120000",

@@ -20,7 +20,7 @@ internal static class TraeHostConfigTests
     {
         void Check(bool ok, string what) => check(ok, what);
 
-        // ---- KnownHosts：本期必须且只能有 Trae CN，路径落到 Trae CN\User\mcp.json ----
+        // ---- KnownHosts：Trae CN 路径与结构 ----
         var hosts = McpConfigInstaller.KnownHosts();
         var traeCn = hosts.Find(h => h.Name == "Trae CN");
         Check(traeCn != null, "trae-cn: KnownHosts 包含名为 'Trae CN' 的宿主");
@@ -37,32 +37,54 @@ internal static class TraeHostConfigTests
                   && traeCn.ExtraEnv.TryGetValue("RUN_MCP_TIMEOUT_MS", out var runMs) && runMs == "600000",
                   "trae-cn: 注入 120s 启动 / 600s 调用超时 env");
         }
-        // 分期哨兵：国际版 TraeCode 本期不允许出现。
-        Check(hosts.Find(h => h.Name == "Trae" || h.Name == "TraeCode") == null,
-              "trae-cn: [分期哨兵] 本期不注册国际版 Trae/TraeCode");
 
-        // ---- entry 构建：默认 lite + Trae 超时 ----
+        // ---- TRAE SOLO：默认/首选宿主，路径落到 TRAE SOLO\User\mcp.json ----
+        var solo = hosts.Find(h => h.Name == "TRAE SOLO");
+        Check(solo != null, "trae-solo: KnownHosts 包含名为 'TRAE SOLO' 的宿主");
+        if (solo != null)
+        {
+            Check(solo.ConfigPath.Replace('/', '\\').EndsWith(
+                      "TRAE SOLO" + Path.DirectorySeparatorChar + "User" + Path.DirectorySeparatorChar + "mcp.json",
+                      StringComparison.Ordinal),
+                  "trae-solo: 配置路径以 TRAE SOLO\\User\\mcp.json 结尾（实际: " + solo.ConfigPath + "）");
+            Check(solo.Style == McpConfigInstaller.HostStyle.McpServers,
+                  "trae-solo: 使用标准 mcpServers 结构");
+            Check(solo.ExtraEnv != null
+                  && solo.ExtraEnv["START_MCP_TIMEOUT_MS"] == "120000"
+                  && solo.ExtraEnv["RUN_MCP_TIMEOUT_MS"] == "600000",
+                  "trae-solo: 注入 120s 启动 / 600s 调用超时 env");
+        }
+        Check(McpConfigInstaller.DefaultHostName == "TRAE SOLO",
+              "trae-solo: DefaultHostName 为 TRAE SOLO（一键注册的默认首选）");
+        // 默认首选必须在宿主列表里真实存在，否则排序置顶会落空。
+        Check(hosts.Exists(h => h.Name == McpConfigInstaller.DefaultHostName),
+              "trae-solo: 默认首选宿主在 KnownHosts 中存在");
+        // 分期哨兵：国际版 TraeCode 本期仍不注册。
+        Check(hosts.Find(h => h.Name == "Trae" || h.Name == "TraeCode") == null,
+              "trae: [分期哨兵] 本期不注册国际版 Trae/TraeCode");
+
+        // ---- entry 构建：默认 lite + Trae 超时（以 SOLO 的 ExtraEnv 验证）----
         var entry = McpConfigInstaller.BuildServerEntry(
             @"C:\tia\TiaMcpServer.exe", 20, McpConfigInstaller.HostStyle.McpServers, false,
-            traeCn?.ExtraEnv);
+            solo?.ExtraEnv);
         var env0 = entry["env"]?.AsObject();
         Check(env0 != null
               && env0["START_MCP_TIMEOUT_MS"]?.GetValue<string>() == "120000"
               && env0["RUN_MCP_TIMEOUT_MS"]?.GetValue<string>() == "600000",
-              "trae-cn: 条目 env 含两个超时键");
+              "trae-solo: 条目 env 含两个超时键");
         Check(env0 != null && env0["TIA_MCP_PROFILE"] == null,
-              "trae-cn: 默认 lite 不写 TIA_MCP_PROFILE");
+              "trae-solo: 默认 lite 不写 TIA_MCP_PROFILE");
 
         // ---- entry 构建：--full 与宿主超时必须共存（互不覆盖）----
         var entryFull = McpConfigInstaller.BuildServerEntry(
             @"C:\tia\TiaMcpServer.exe", 20, McpConfigInstaller.HostStyle.McpServers, true,
-            traeCn?.ExtraEnv);
+            solo?.ExtraEnv);
         var envF = entryFull["env"]?.AsObject();
         Check(envF != null
               && envF["TIA_MCP_PROFILE"]?.GetValue<string>() == "full"
               && envF["START_MCP_TIMEOUT_MS"]?.GetValue<string>() == "120000"
               && envF["RUN_MCP_TIMEOUT_MS"]?.GetValue<string>() == "600000",
-              "trae-cn: --full 时 TIA_MCP_PROFILE=full 与两个超时 env 共存");
+              "trae-solo: --full 时 TIA_MCP_PROFILE=full 与两个超时 env 共存");
 
         // ---- 回归：无 extraEnv 的普通宿主不应凭空多出超时键 ----
         var plain = McpConfigInstaller.BuildServerEntry(
