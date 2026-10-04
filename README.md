@@ -1,4 +1,4 @@
-﻿# TIA Portal MCP Server (V20 + V21 · S7DCL · CLI · read-only online monitoring · one-click config · Doctor)
+# TIA Portal MCP Server (V20 + V21 · S7DCL · CLI · read-only online monitoring · one-click config · Doctor)
 
 > Current version: see the Release badge below and [CHANGELOG.md](CHANGELOG.md) (this README no longer hardcodes a version).
 
@@ -176,9 +176,9 @@ More: [AI assistant](https://aeenhance.com/assistant) · [Online debugging](http
    It self-discovers everything: its own absolute path, the installed TIA Portal
    (registry) and version, and the version-matching exe (V20/V21 picked for you) —
    then writes the `tia-portal` entry into every AI host detected on this machine:
-   **Claude Desktop / Claude Code / Cursor / VS Code** (existing config backed up
+   **Claude Desktop / Claude Code / Cursor / VS Code / Trae CN** (existing config backed up
    as `.bak`, other servers preserved). Restart the AI client to load it.
-   Options: `config --host vscode` (or `claude|claude-code|cursor`), `config --print`
+   Options: `config --host vscode` (or `claude|claude-code|cursor|trae-cn`), `config --print`
    to copy a snippet manually. The server lists **~55 core tools of 222 by default**
    (~8,500 instead of ~38,800 tokens of schema per turn) so weaker models are not drowned
    and VS Code/Copilot's 128-tool cap and Windsurf's 100 never trip. Nothing is lost: the

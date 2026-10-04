@@ -1,6 +1,6 @@
-﻿@echo off
+@echo off
 chcp 65001 >nul
-rem 一键把本 MCP 注册进 Claude Desktop / Claude Code / Cursor / VS Code（V21）。V20 用户请改用 配置MCP-v20.bat。
+rem 一键把本 MCP 注册进 Claude Desktop / Claude Code / Cursor / VS Code / Trae CN（国内版）（V21）。V20 用户请改用 配置MCP-v20.bat。
 rem 自动写入正确的 exe 路径并合并到现有配置（保留你已有的其它 MCP server，原配置自动备份为 *.bak）。
 rem 引擎 exe 位置：交付 zip 在 tools\...\bin\Release\net48；git 克隆在 runtime\v21。两处都找。
 set "EXE=%~dp0runtime\v21\TiaMcpServer.exe"

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -42,9 +42,29 @@ namespace TiaMcpServer.Cli
             public string Name;
             public string ConfigPath;
             public HostStyle Style;
+
+            /// <summary>
+            /// 宿主专属、需要额外写入 server 条目 env 块的键值（如 Trae 的启动/调用超时）。
+            /// 为 null 表示该宿主没有额外 env，条目 env 只由 --full 的 TIA_MCP_PROFILE 决定。
+            /// 合并规则见 <see cref="BuildServerEntry"/>：profile 与本字典键不冲突时共存于同一 env 对象。
+            /// </summary>
+            public IReadOnlyDictionary<string, string>? ExtraEnv;
+
             public Host(string name, string path, HostStyle style)
             {
                 Name = name; ConfigPath = path; Style = style;
+            }
+
+            /// <summary>
+            /// 带宿主专属 env 的构造函数。
+            /// </summary>
+            /// <param name="name">宿主展示名（同时用于 --host 的模糊匹配）。</param>
+            /// <param name="path">该宿主 MCP 配置文件的绝对路径。</param>
+            /// <param name="style">配置文件 schema 家族。</param>
+            /// <param name="extraEnv">写入条目 env 的宿主专属键值；无则传 null。</param>
+            public Host(string name, string path, HostStyle style, IReadOnlyDictionary<string, string>? extraEnv)
+            {
+                Name = name; ConfigPath = path; Style = style; ExtraEnv = extraEnv;
             }
         }
 
@@ -67,6 +87,18 @@ namespace TiaMcpServer.Cli
                 new Host("Cline",          Path.Combine(appData, "Code", "User", "globalStorage",
                                                         "saoudrizwan.claude-dev", "settings",
                                                         "cline_mcp_settings.json"),                       HostStyle.McpServers),
+                // Trae 国内版（Trae CN）。全局配置即 Agent 实际读取的文件，格式与 Claude/Cursor 同为
+                // 根键 mcpServers + {command,args,env}。TIA headless 冷启动 10–28s，远超 Trae 默认启动
+                // 超时，故这里通过其专属 env 把启动超时放宽到 120s、单次工具调用超时放宽到 600s。
+                // 注意：Trae 官方要求 command 路径不含空格，含空格交付目录的警告在 CliCommands.Config 里提示。
+                // 国际版 Trae/TraeCode 的候选路径为 %APPDATA%\Trae\User\mcp.json（本机当前尚无该文件），
+                // 按分期要求本期不实现，勿并入本条目。
+                new Host("Trae CN",        Path.Combine(appData, "Trae CN", "User", "mcp.json"), HostStyle.McpServers,
+                         new Dictionary<string, string>
+                         {
+                             ["START_MCP_TIMEOUT_MS"] = "120000",
+                             ["RUN_MCP_TIMEOUT_MS"]   = "600000",
+                         }),
             };
         }
 
@@ -89,6 +121,19 @@ namespace TiaMcpServer.Cli
         }
 
         public static JsonObject BuildServerEntry(string exePath, int tiaMajorVersion, HostStyle style, bool full = false)
+            => BuildServerEntry(exePath, tiaMajorVersion, style, full, null);
+
+        /// <summary>
+        /// 构造单个 mcpServers/servers 条目。
+        /// </summary>
+        /// <param name="exePath">引擎 exe 绝对路径。</param>
+        /// <param name="tiaMajorVersion">写入 args 的 TIA 大版本。</param>
+        /// <param name="style">宿主 schema（决定是否补 type:"stdio"）。</param>
+        /// <param name="full">true 时额外写 TIA_MCP_PROFILE=full。</param>
+        /// <param name="extraEnv">宿主专属 env（如 Trae 超时）；与 full 的 profile 键共存，null 表示无。</param>
+        /// <returns>可直接挂到 mcpServers/servers 下的条目 JsonObject。</returns>
+        public static JsonObject BuildServerEntry(string exePath, int tiaMajorVersion, HostStyle style, bool full,
+                                                  IReadOnlyDictionary<string, string>? extraEnv)
         {
             var entry = new JsonObject();
             if (style == HostStyle.VsCode) entry["type"] = "stdio";
@@ -97,18 +142,38 @@ namespace TiaMcpServer.Cli
             // The engine defaults to the ~48-tool lite roster on its own, so the normal config
             // needs no env at all. Only the opt-out is worth writing — and it is an opt-out with
             // consequences: the full roster exceeds what VS Code/Copilot (128) and Windsurf (100) load.
-            if (full) entry["env"] = new JsonObject { ["TIA_MCP_PROFILE"] = "full" };
+            // env 块按需创建：--full 的 profile 与宿主专属 env（如 Trae 超时）合并共存。
+            bool hasProfile = full;
+            bool hasExtra = extraEnv != null && extraEnv.Count > 0;
+            if (hasProfile || hasExtra)
+            {
+                var env = new JsonObject();
+                if (hasProfile) env["TIA_MCP_PROFILE"] = "full";
+                if (hasExtra)
+                    foreach (var kv in extraEnv!)
+                        env[kv.Key] = kv.Value;
+                entry["env"] = env;
+            }
             return entry;
         }
 
         /// <summary>Pretty single-server snippet for hosts we don't write automatically.</summary>
         public static string Snippet(string exePath, int tiaMajorVersion, HostStyle style = HostStyle.McpServers, bool full = false)
+            => Snippet(exePath, tiaMajorVersion, style, full, null);
+
+        /// <summary>
+        /// 输出供手动粘贴的单 server JSON/TOML 片段。
+        /// </summary>
+        /// <param name="extraEnv">宿主专属 env，透传给条目构建；null 表示无。</param>
+        /// <returns>格式化后的配置片段文本。</returns>
+        public static string Snippet(string exePath, int tiaMajorVersion, HostStyle style, bool full,
+                                     IReadOnlyDictionary<string, string>? extraEnv)
         {
             if (style == HostStyle.CodexToml) return CodexTomlSection(exePath, tiaMajorVersion, full);
             string rootKey = style == HostStyle.VsCode ? "servers" : "mcpServers";
             var root = new JsonObject
             {
-                [rootKey] = new JsonObject { [ServerKey] = BuildServerEntry(exePath, tiaMajorVersion, style, full) }
+                [rootKey] = new JsonObject { [ServerKey] = BuildServerEntry(exePath, tiaMajorVersion, style, full, extraEnv) }
             };
             return root.ToJsonString(JsonOpts);
         }
@@ -118,6 +183,15 @@ namespace TiaMcpServer.Cli
         /// Throws on hard I/O / parse failure so the caller can report it.
         /// </summary>
         public static string Apply(string configPath, string exePath, int tiaMajorVersion, HostStyle style = HostStyle.McpServers, bool full = false)
+            => Apply(configPath, exePath, tiaMajorVersion, style, full, null);
+
+        /// <summary>
+        /// Upserts the tia-portal server into one host config. Returns a human-readable status line.
+        /// Throws on hard I/O / parse failure so the caller can report it.
+        /// </summary>
+        /// <param name="extraEnv">宿主专属 env，透传进条目；null 表示无（与既有宿主行为一致）。</param>
+        public static string Apply(string configPath, string exePath, int tiaMajorVersion, HostStyle style, bool full,
+                                   IReadOnlyDictionary<string, string>? extraEnv)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(configPath));
             if (style == HostStyle.CodexToml) return ApplyCodexToml(configPath, exePath, tiaMajorVersion, full);
@@ -144,7 +218,7 @@ namespace TiaMcpServer.Cli
             }
 
             bool existed = servers.ContainsKey(ServerKey);
-            servers[ServerKey] = BuildServerEntry(exePath, tiaMajorVersion, style, full);
+            servers[ServerKey] = BuildServerEntry(exePath, tiaMajorVersion, style, full, extraEnv);
 
             AtomicWriteAllText(configPath, root.ToJsonString(JsonOpts));
             return (existed ? "updated" : "wrote") + " " + ServerKey + " -> " + configPath;

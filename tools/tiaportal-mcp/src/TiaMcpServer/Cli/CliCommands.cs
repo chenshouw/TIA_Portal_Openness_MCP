@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -193,6 +193,14 @@ namespace TiaMcpServer.Cli
                 Console.WriteLine("VS Code — %APPDATA%\\Code\\User\\mcp.json (servers):");
                 Console.WriteLine(McpConfigInstaller.Snippet(exe, ver, McpConfigInstaller.HostStyle.VsCode, full));
                 Console.WriteLine();
+                // Trae 国内版同样是 mcpServers 结构，但需要额外的启动/调用超时 env，故单独输出其片段。
+                var traeCn = McpConfigInstaller.KnownHosts().Find(h => h.Name == "Trae CN");
+                if (traeCn != null)
+                {
+                    Console.WriteLine($"Trae CN（国内版）— {traeCn.ConfigPath} (mcpServers，含冷启动超时 env):");
+                    Console.WriteLine(McpConfigInstaller.Snippet(exe, ver, traeCn.Style, full, traeCn.ExtraEnv));
+                    Console.WriteLine();
+                }
                 Console.WriteLine("Gemini CLI / Windsurf / Cline use the same mcpServers shape as the first snippet.");
                 Console.WriteLine();
                 Console.WriteLine("Codex — %USERPROFILE%\\.codex\\config.toml (TOML):");
@@ -217,7 +225,14 @@ namespace TiaMcpServer.Cli
                     continue;
                 }
 
-                try { Console.WriteLine("  [ok]     " + h.Name + ": " + McpConfigInstaller.Apply(h.ConfigPath, exe, ver, h.Style, full)); done++; }
+                // Trae 官方要求 stdio 的 command 路径不含空格（含空格会解析失败）。这里只警告不阻断，
+                // 因为最终是否被拒绝取决于宿主版本，且用户可能改用无空格的 junction/复制目录。
+                if (h.Name == "Trae CN" && exe.IndexOf(' ') >= 0)
+                {
+                    Console.WriteLine("  [warn]   " + h.Name + ": 引擎路径含空格（" + exe + "），Trae 可能无法启动该 command；建议把交付包放到无空格目录后重跑 config。");
+                }
+
+                try { Console.WriteLine("  [ok]     " + h.Name + ": " + McpConfigInstaller.Apply(h.ConfigPath, exe, ver, h.Style, full, h.ExtraEnv)); done++; }
                 catch (Exception ex) { Console.Error.WriteLine("  [failed] " + h.Name + ": " + ex.Message); failed++; }
             }
 
@@ -376,10 +391,10 @@ USAGE
   tia export   <project.apXX> --plc NAME --out DIR --block PATH [--scl]
   tia import   <project.apXX> --plc NAME --from DIR [--no-overwrite]
   tia prewarm  [--stop]                                   Hold a headless instance open (~1s attach after)
-  tia config   [--host claude|claude-code|cursor|vscode|codex|gemini|windsurf|cline] [--print] [--full]
+  tia config   [--host claude|claude-code|cursor|vscode|codex|gemini|windsurf|cline|trae-cn] [--print] [--full]
                                                           One-click: register this MCP into all detected AI hosts
-                                                          (Claude Desktop / Claude Code / Cursor / VS Code); auto-picks
-                                                          the exe matching your installed TIA version.
+                                                          (Claude Desktop / Claude Code / Cursor / VS Code / Trae CN);
+                                                          auto-picks the exe matching your installed TIA version.
                                                           Default lists ~48 core tools; the rest stay reachable
                                                           on demand via FindTools + CallTool.
                                                           --full = list every tool instead (rejected by VS Code/

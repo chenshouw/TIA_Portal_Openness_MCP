@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <!--
     最小离线自检套件。
 
@@ -43,5 +43,10 @@
     <!-- DescribeBlockLogic 的回读（issue #42）：错了不报错、不崩，只会让人看到不存在的逻辑。 -->
     <Compile Include="..\..\src\TiaMcpServer\ModelContextProtocol\SimaticMlText.cs" Link="SimaticMlText.cs" />
     <Compile Include="..\..\src\TiaMcpServer\ModelContextProtocol\LadTextRenderer.cs" Link="LadTextRenderer.cs" />
+    <!-- AI 宿主一键注册（含 Trae CN）。McpConfigInstaller 本身只用 BCL + System.Text.Json，
+         但其 ExeForVersion() 引用 EngineRouter —— 后者同样零 Siemens 依赖，一并链入即可在
+         net8.0 编译。盯的是注册合并/宿主 env 注入：写错了不会崩，只会悄悄丢配置或丢超时。 -->
+    <Compile Include="..\..\src\TiaMcpServer\Siemens\EngineRouter.cs" Link="EngineRouter.cs" />
+    <Compile Include="..\..\src\TiaMcpServer\Cli\McpConfigInstaller.cs" Link="McpConfigInstaller.cs" />
   </ItemGroup>
 </Project>

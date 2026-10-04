@@ -1,4 +1,4 @@
-﻿# TIA Portal MCP 完整交付包（V20+V21 + S7DCL + CLI + 在线只读监控 + 一键配置 + Doctor 体检）
+# TIA Portal MCP 完整交付包（V20+V21 + S7DCL + CLI + 在线只读监控 + 一键配置 + Doctor 体检）
 
 > 当前版本见上方 Release 徽章与 [CHANGELOG.md](CHANGELOG.md)（README 不再硬编码版本号）。
 
@@ -177,8 +177,8 @@ GetVersionControlStatus(changedOnly=true)
 2. **挂载 MCP（一条命令，全自动）**  
    **双击根目录的 `配置MCP.bat`**（V20 用 `配置MCP-v20.bat`）即可；命令行等价写法：`tia.cmd config`。
 
-   它会**自动发现一切**：自己的绝对路径、注册表里的博途安装与版本、与版本匹配的 exe（V20/V21 自动选对），然后把 `tia-portal` 条目一次性写进本机检测到的所有 AI 客户端配置——**Claude Desktop / Claude Code / Cursor / VS Code**（原配置自动备份 `.bak`，其它 server 原样保留）。重启 AI 客户端即生效。  
-   - 只配某一个宿主：`config --host vscode`（可选 `claude|claude-code|cursor|vscode`）；  
+   它会**自动发现一切**：自己的绝对路径、注册表里的博途安装与版本、与版本匹配的 exe（V20/V21 自动选对），然后把 `tia-portal` 条目一次性写进本机检测到的所有 AI 客户端配置——**Claude Desktop / Claude Code / Cursor / VS Code / Trae CN（国内版）**（原配置自动备份 `.bak`，其它 server 原样保留）。重启 AI 客户端即生效。  
+   - 只配某一个宿主：`config --host vscode`（可选 `claude|claude-code|cursor|vscode|trae-cn` 等）；  
    - 只看不写（手动粘贴其它宿主）：`config --print`；  
    - **工具档位**：默认就是精简档（~55 个核心工具），无需任何参数，见下文《工具档位》；想一次列全 221 个用 `config --full`；  
    - **连不上 / 报错**：`tia.cmd doctor` 一键体检（TIA 安装 / exe 版本匹配 / Openness 用户组 / 宿主注册状态，每项给修法；`--fix` 自动补用户组，v2.2.8）；  

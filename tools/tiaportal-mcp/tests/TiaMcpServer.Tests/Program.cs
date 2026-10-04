@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace TiaMcpServer.Tests
@@ -62,6 +62,9 @@ namespace TiaMcpServer.Tests
 
             Console.WriteLine("== DescribeBlockLogic 的 SCL 回读逐行还原：下标 / 调用 / 常量 / 引号（issue #42）==");
             SymbolQuotingReadbackTests.Run(Check);
+
+            Console.WriteLine("== AI 宿主一键注册：Trae CN 超时 env / 市场条目保留 / 分期边界 ==");
+            TraeHostConfigTests.Run(Check);
 
             Console.WriteLine(_fail == 0
                 ? $"{_pass} passed, {_fail} failed, {_skip} skipped."
